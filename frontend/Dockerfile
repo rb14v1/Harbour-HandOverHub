@@ -13,7 +13,7 @@ FROM nginx:1.27-alpine
 
 RUN apk upgrade --no-cache
 
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+RUN printf 'server {\n  listen 0.0.0.0:8080;\n  server_name _;\n  root /usr/share/nginx/html;\n  index index.html;\n  client_body_temp_path /tmp/nginx-cache/client_body;\n  proxy_temp_path /tmp/nginx-cache/proxy;\n  fastcgi_temp_path /tmp/nginx-cache/fastcgi;\n  uwsgi_temp_path /tmp/nginx-cache/uwsgi;\n  scgi_temp_path /tmp/nginx-cache/scgi;\n  location = /healthz {\n    access_log off;\n    default_type text/plain;\n    return 200 "ok";\n  }\n  location / {\n    try_files $uri $uri/ /index.html;\n  }\n}\n' > /etc/nginx/conf.d/default.conf
 COPY --from=builder /app/dist /usr/share/nginx/html
 
 # nginx must run unprivileged, so every path it writes to moves somewhere the nginx user owns.
