@@ -6,9 +6,26 @@ from dotenv import load_dotenv
 BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR / ".env", override=True)
 
-SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "dev-only-change-me")
+from django.core.exceptions import ImproperlyConfigured
+
+
+def _csv(name, default):
+    return [v.strip() for v in os.getenv(name, default).split(",") if v.strip()]
+
+
 DEBUG = os.getenv("DJANGO_DEBUG", "1") == "1"
-ALLOWED_HOSTS = ["localhost", "127.0.0.1"]
+
+# Validate required configuration on startup (dev defaults only allowed when DEBUG=1).
+_REQUIRED = ["DJANGO_SECRET_KEY", "MONGODB_URI"]
+if not DEBUG:
+    _missing = [name for name in _REQUIRED if not os.getenv(name)]
+    if _missing:
+        raise ImproperlyConfigured(
+            "Missing required environment variables: " + ", ".join(_missing)
+        )
+
+SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "dev-only-change-me")
+ALLOWED_HOSTS = _csv("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1")
 
 INSTALLED_APPS = [
     "corsheaders",
@@ -27,11 +44,13 @@ TEMPLATES = []
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
+        "NAME": os.getenv("SQLITE_PATH", str(BASE_DIR / "db.sqlite3")),
     }
 }
 
-CORS_ALLOWED_ORIGINS = ["http://localhost:5173", "http://127.0.0.1:5173"]
+CORS_ALLOWED_ORIGINS = _csv(
+    "CORS_ALLOWED_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173"
+)
 
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [],
